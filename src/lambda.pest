@@ -1,0 +1,11 @@
+lam = _{ "λ" | "\\" }
+WHITESPACE = _{ " " }
+
+var = { ALPHABETIC }
+abs_bound = { ALPHABETIC }
+abs = { lam ~ abs_bound ~ "." ~ expr }
+app = { "(" ~ expr ~ ")" }
+term = { abs | app | var }
+expr = { term* }
+
+lambda = { SOI ~ expr ~ EOI }
