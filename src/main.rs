@@ -1,12 +1,14 @@
 #![feature(box_syntax)]
+#![feature(iterator_fold_self)]
 #[macro_use]
 extern crate pest_derive;
 
 mod ast;
-mod parser;
 mod indice;
+mod parser;
 
 use crate::parser::parse;
+use ast::ToBareTerm;
 use indice::uid::{to_uid, UIDGenerator};
 
 fn main() {
