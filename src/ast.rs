@@ -3,16 +3,11 @@ use std::fmt::{Debug, Display, Formatter, Result};
 pub use Term::*;
 
 pub trait IDType: Debug + Display {
-    fn get_name(&self) -> char;
 }
 
 pub type BareID = char;
 
-impl IDType for BareID {
-    fn get_name(&self) -> char {
-        *self
-    }
-}
+impl IDType for BareID {}
 
 pub trait ToBareTerm {
     fn to_bare(&self) -> Term<BareID>;
@@ -38,12 +33,20 @@ impl<T: IDType> Term<T> {
         match self {
             Term::Var(chr) => format!("{}", chr),
             Term::Abs(bound, term) => {
-                let rtn = format!("λ{}.{}", bound.get_name(), term.shows_prec(0));
-                if prec > 0 { format!("({})", rtn) } else { rtn }
+                let rtn = format!("λ{}.{}", bound, term.shows_prec(0));
+                if prec > 0 {
+                    format!("({})", rtn)
+                } else {
+                    rtn
+                }
             }
             Term::App(lhs, rhs) => {
                 let rtn = format!("{} {}", lhs.shows_prec(1), rhs.shows_prec(2));
-                if prec > 1 { format!("({})", rtn) } else { rtn }
+                if prec > 1 {
+                    format!("({})", rtn)
+                } else {
+                    rtn
+                }
             }
         }
     }
