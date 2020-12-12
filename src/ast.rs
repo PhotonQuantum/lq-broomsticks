@@ -2,8 +2,7 @@ use std::fmt::{Debug, Display, Formatter, Result};
 
 pub use Term::*;
 
-pub trait IDType: Debug + Display {
-}
+pub trait IDType: Debug + Display {}
 
 pub type BareID = char;
 
@@ -11,6 +10,13 @@ impl IDType for BareID {}
 
 pub trait ToBareTerm {
     fn to_bare(&self) -> Term<BareID>;
+}
+
+pub trait Reducible {
+    type ID: IDType;
+    fn subst(&self, from: &Self::ID, to: &Self) -> Self;
+    fn cbn_reduce(&self) -> Self;
+    fn nor_reduce(&self) -> Self;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

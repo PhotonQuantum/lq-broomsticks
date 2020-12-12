@@ -2,12 +2,13 @@ use pest::error::Error;
 use pest::Parser;
 
 use crate::ast::*;
+use std::result;
 
 #[derive(Parser)]
 #[grammar = "lambda.pest"]
 pub struct LambdaParser;
 
-pub fn parse(source: &str) -> Result<Term<BareID>, Error<Rule>> {
+pub fn parse(source: &str) -> result::Result<Term<BareID>, Error<Rule>> {
     let mut ast = vec![];
 
     let mut pairs = LambdaParser::parse(Rule::lambda, source)?;
@@ -18,7 +19,7 @@ pub fn parse(source: &str) -> Result<Term<BareID>, Error<Rule>> {
             for pair in pairs {
                 match pair.as_rule() {
                     Rule::expr => ast.push(parse_expr(pair.into_inner())),
-                    Rule::EOI => {},
+                    Rule::EOI => {}
                     _ => unreachable!(),
                 }
             }

@@ -161,3 +161,42 @@ impl Term<UID> {
         }
     }
 }
+
+impl Reducible for Term<UID> {
+    type ID = UID;
+
+    fn subst(&self, from: &UID, to: &Term<UID>) -> Term<UID> {
+        match self {
+            Var(x) => {
+                if x.uid == from.uid {
+                    to.clone()
+                } else {
+                    self.clone()
+                }
+            }
+            Abs(x, e) => Abs(*x, box e.subst(from, to)),
+            App(e1, e2) => App(box e1.subst(from, to), box e2.subst(from, to)),
+        }
+    }
+
+    fn cbn_reduce(&self) -> Term<UID> {
+        match self {
+            App(e1, e2) => match e1.cbn_reduce() {
+                Abs(x, e) => e.subst(&x, e2).cbn_reduce(),
+                e1_ => App(box e1_, e2.clone()),
+            },
+            _ => self.clone(),
+        }
+    }
+
+    fn nor_reduce(&self) -> Term<UID> {
+        match self {
+            Abs(x, e) => Abs(*x, box e.nor_reduce()),
+            App(e1, e2) => match e1.cbn_reduce() {
+                Abs(x, e) => e.subst(&x, e2).nor_reduce(),
+                e1_ => App(box e1_.nor_reduce(), box e2.nor_reduce()),
+            },
+            _ => self.clone(),
+        }
+    }
+}

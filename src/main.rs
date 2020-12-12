@@ -3,25 +3,24 @@
 #[macro_use]
 extern crate pest_derive;
 
+use ast::ToBareTerm;
+use indice::uid::{to_uid, UIDGenerator};
+
+use crate::ast::Reducible;
+use crate::parser::parse;
+
 mod ast;
 mod indice;
 mod parser;
 
-use crate::parser::parse;
-use ast::ToBareTerm;
-use indice::uid::{to_uid, UIDGenerator};
-
 fn main() {
-    test_uid("λf.(λx.f (x x)) (λx.f (x x))");
-    test_uid("λx.xx");
+    test_reduce("(λa.λb.λc.a (λd.λe.e (d b)) (λd.c) (λd.d)) (λa.λb.a b)");
+    test_reduce("(λf.(λx.f (x x)) (λx.f (x x))) \\f.x");
+    test_reduce("(\\y.\\x.yxz)x");
 }
 
-fn test_uid(expr: &str) {
+fn test_reduce(expr: &str) {
     let expr = parse(expr).unwrap();
-    println!("{:?}", expr);
-
-    let mut gen = UIDGenerator::default();
-    let uid_expr = to_uid(&expr, &mut gen);
-    println!("{:?}", uid_expr);
-    println!("{}", uid_expr.to_bare());
+    let expr = to_uid(&expr, &mut UIDGenerator::default());
+    println!("{} -->nor {}", expr.to_bare(), expr.nor_reduce().to_bare());
 }
