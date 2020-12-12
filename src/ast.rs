@@ -14,6 +14,9 @@ pub enum ReduceStrategy {
     NOR,
     CBV,
     APP,
+    HAP,
+    HSR,
+    HNO,
 }
 
 pub trait Reducible {

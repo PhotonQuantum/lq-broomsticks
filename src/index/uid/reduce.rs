@@ -1,6 +1,16 @@
 use crate::ast::*;
 use crate::index::uid::UID;
 
+macro_rules! break_by_limit {
+    ($self: ident, $limit: ident) => {
+        if let Some(i) = $limit {
+            if i == 0 {
+                return $self.clone();
+            }
+        }
+    };
+}
+
 impl Term<UID> {
     fn _subst(&self, from: &UID, to: &Term<UID>) -> Term<UID> {
         match self {
@@ -17,11 +27,7 @@ impl Term<UID> {
     }
 
     fn cbn_reduce(&self, limit: Option<usize>) -> Term<UID> {
-        if let Some(i) = limit {
-            if i == 0 {
-                return self.clone();
-            }
-        }
+        break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.cbn_reduce(limit) {
                 Abs(x, e) => Abs(x, e)
@@ -34,11 +40,7 @@ impl Term<UID> {
     }
 
     fn nor_reduce(&self, limit: Option<usize>) -> Term<UID> {
-        if let Some(i) = limit {
-            if i == 0 {
-                return self.clone();
-            }
-        }
+        break_by_limit!(self, limit);
         match self {
             Abs(x, e) => Abs(*x, box e.nor_reduce(limit)),
             App(e1, e2) => match e1.cbn_reduce(limit) {
@@ -47,6 +49,75 @@ impl Term<UID> {
                     .nor_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_.nor_reduce(limit), box e2.nor_reduce(limit)),
             },
+            _ => self.clone(),
+        }
+    }
+
+    fn cbv_reduce(&self, limit: Option<usize>) -> Term<UID> {
+        break_by_limit!(self, limit);
+        match self {
+            App(e1, e2) => match e1.cbv_reduce(limit) {
+                Abs(x, e) => Abs(x, e)
+                    .subst(&e2.cbv_reduce(limit))
+                    .cbv_reduce(limit.and_then(|i| Some(i - 1))),
+                e1_ => App(box e1_, box e2.cbv_reduce(limit)),
+            },
+            _ => self.clone(),
+        }
+    }
+
+    fn app_reduce(&self, limit: Option<usize>) -> Term<UID> {
+        break_by_limit!(self, limit);
+        match self {
+            App(e1, e2) => match e1.app_reduce(limit) {
+                Abs(x, e) => Abs(x, e)
+                    .subst(&e2.app_reduce(limit))
+                    .app_reduce(limit.and_then(|i| Some(i - 1))),
+                e1_ => App(box e1_, box e2.app_reduce(limit)),
+            },
+            Abs(x, e) => Abs(*x, box e.app_reduce(limit)),
+            _ => self.clone(),
+        }
+    }
+
+    fn hap_reduce(&self, limit: Option<usize>) -> Term<UID> {
+        break_by_limit!(self, limit);
+        match self {
+            App(e1, e2) => match e1.cbv_reduce(limit) {
+                Abs(x, e) => Abs(x, e)
+                    .subst(&e2.hap_reduce(limit))
+                    .hap_reduce(limit.and_then(|i| Some(i - 1))),
+                e1_ => App(box e1_.hap_reduce(limit), box e2.hap_reduce(limit)),
+            },
+            Abs(x, e) => Abs(*x, box e.hap_reduce(limit)),
+            _ => self.clone(),
+        }
+    }
+
+    fn hsr_reduce(&self, limit: Option<usize>) -> Term<UID> {
+        break_by_limit!(self, limit);
+        match self {
+            App(e1, e2) => match e1.hsr_reduce(limit) {
+                Abs(x, e) => Abs(x, e)
+                    .subst(&e2)
+                    .hsr_reduce(limit.and_then(|i| Some(i - 1))),
+                e1_ => App(box e1_, e2.clone()),
+            },
+            Abs(x, e) => Abs(*x, box e.hsr_reduce(limit)),
+            _ => self.clone(),
+        }
+    }
+
+    fn hno_reduce(&self, limit: Option<usize>) -> Term<UID> {
+        break_by_limit!(self, limit);
+        match self {
+            App(e1, e2) => match e1.hsr_reduce(limit) {
+                Abs(x, e) => Abs(x, e)
+                    .subst(&e2)
+                    .hno_reduce(limit.and_then(|i| Some(i - 1))),
+                e1_ => App(box e1_.hno_reduce(limit), box e2.hno_reduce(limit)),
+            },
+            Abs(x, e) => Abs(*x, box e.hno_reduce(limit)),
             _ => self.clone(),
         }
     }
@@ -67,7 +138,11 @@ impl Reducible for Term<UID> {
         match strategy {
             ReduceStrategy::CBN => self.cbn_reduce(limit),
             ReduceStrategy::NOR => self.nor_reduce(limit),
-            _ => unimplemented!(),
+            ReduceStrategy::CBV => self.cbv_reduce(limit),
+            ReduceStrategy::APP => self.app_reduce(limit),
+            ReduceStrategy::HAP => self.hap_reduce(limit),
+            ReduceStrategy::HSR => self.hsr_reduce(limit),
+            ReduceStrategy::HNO => self.hno_reduce(limit),
         }
     }
 }
