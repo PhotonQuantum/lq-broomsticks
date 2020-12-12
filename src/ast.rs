@@ -2,21 +2,24 @@ use std::fmt::{Debug, Display, Formatter, Result};
 
 pub use Term::*;
 
-pub trait IDType: Debug + Display {}
+pub trait IDType: Debug + Display + Copy {}
 
 pub type BareID = char;
 
 impl IDType for BareID {}
 
-pub trait ToBareTerm {
-    fn to_bare(&self) -> Term<BareID>;
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum ReduceStrategy {
+    CBN,
+    NOR,
+    CBV,
+    APP,
 }
 
 pub trait Reducible {
     type ID: IDType;
-    fn subst(&self, from: &Self::ID, to: &Self) -> Self;
-    fn cbn_reduce(&self) -> Self;
-    fn nor_reduce(&self) -> Self;
+    fn subst(&self, ex: &Self) -> Self;
+    fn beta_reduce(&self, strategy: ReduceStrategy, limit: Option<usize>) -> Self;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

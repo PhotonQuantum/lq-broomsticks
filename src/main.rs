@@ -1,16 +1,16 @@
 #![feature(box_syntax)]
-#![feature(iterator_fold_self)]
+#![feature(iterator_fold_self, type_alias_impl_trait)]
 #[macro_use]
 extern crate pest_derive;
 
-use ast::ToBareTerm;
-use indice::uid::{to_uid, UIDGenerator};
-
-use crate::ast::Reducible;
+use crate::ast::ReduceStrategy::NOR;
+use crate::ast::{BareID, IDType, Reducible, Term};
 use crate::parser::parse;
 
+use index::uid::*;
+
 mod ast;
-mod indice;
+mod index;
 mod parser;
 
 fn main() {
@@ -21,6 +21,14 @@ fn main() {
 
 fn test_reduce(expr: &str) {
     let expr = parse(expr).unwrap();
-    let expr = to_uid(&expr, &mut UIDGenerator::default());
-    println!("{} -->nor {}", expr.to_bare(), expr.nor_reduce().to_bare());
+    let mut expr = from::to_uid(&expr, &mut UIDGenerator::default());
+    println!("{}", Term::<BareID>::from(expr.clone()));
+    loop {
+        let new_expr = expr.beta_reduce(NOR, Some(1));
+        if expr == new_expr {
+            break;
+        }
+        println!("--> {}", Term::<BareID>::from(new_expr.clone()));
+        expr = new_expr;
+    }
 }
