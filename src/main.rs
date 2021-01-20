@@ -6,7 +6,8 @@ extern crate pest_derive;
 use index::uid::*;
 
 use crate::ast::ReduceStrategy::*;
-use crate::ast::{BareID, ReduceStrategy, Reducible, Term};
+use crate::ast::{ReduceStrategy, Reducible, Term};
+use crate::index::bare::BareIdent;
 use crate::parser::parse;
 
 mod ast;
@@ -24,20 +25,25 @@ fn main() {
     );
     test_reduce("(λf.(λx.f (x x)) (λx.f (x x))) \\f.x", APP);
     test_reduce("(λf.(λx.f (x x)) (λx.f (x x))) \\f.x", CBN);
-    test_reduce("(\\y.\\x.zxy)x", APP);
-    test_reduce("(\\y.\\x.zxy)x", CBN);
+    test_reduce("(\\y.\\x.z x y) x", APP);
+    test_reduce("(\\y.\\x.z x y) x", CBN);
+    test_reduce("(\\f.\\x.f x) (\\f.\\x.f x)", NOR);
 }
 
 fn test_reduce(expr: &str, strategy: ReduceStrategy) {
     let expr = parse(expr).unwrap();
-    let mut expr = from::to_uid(&expr, &mut UIDGenerator::default());
-    println!("{}", Term::<BareID>::from(expr.clone()));
+    let mut expr: Term<UID> = Term::from(expr);
+    println!(
+        "\n{} => {}",
+        Term::<BareIdent>::from(expr.clone()),
+        Term::<BareIdent>::from(expr.beta_reduce(strategy, None))
+    );
     loop {
         let new_expr = expr.beta_reduce(strategy, Some(1));
         if expr == new_expr {
             break;
         }
-        println!("--> {}", Term::<BareID>::from(new_expr.clone()));
+        println!("--> {}", Term::<BareIdent>::from(new_expr.clone()));
         expr = new_expr;
     }
 }

@@ -1,14 +1,16 @@
+use std::result;
+
 use pest::error::Error;
 use pest::Parser;
 
 use crate::ast::*;
-use std::result;
+use crate::index::bare::BareIdent;
 
 #[derive(Parser)]
 #[grammar = "lambda.pest"]
 pub struct LambdaParser;
 
-pub fn parse(source: &str) -> result::Result<Term<BareID>, Error<Rule>> {
+pub fn parse(source: &str) -> result::Result<Term<BareIdent>, Error<Rule>> {
     let mut ast = vec![];
 
     let mut pairs = LambdaParser::parse(Rule::lambda, source)?;
@@ -30,7 +32,7 @@ pub fn parse(source: &str) -> result::Result<Term<BareID>, Error<Rule>> {
     Ok(ast.first().unwrap().clone())
 }
 
-fn parse_expr<'a>(pairs: impl Iterator<Item = pest::iterators::Pair<'a, Rule>>) -> Term<BareID> {
+fn parse_expr<'a>(pairs: impl Iterator<Item = pest::iterators::Pair<'a, Rule>>) -> Term<BareIdent> {
     pairs
         .into_iter()
         .map(|term| parse_term(term.into_inner().next().unwrap()))
@@ -43,15 +45,15 @@ fn parse_expr<'a>(pairs: impl Iterator<Item = pest::iterators::Pair<'a, Rule>>) 
         .unwrap()
 }
 
-fn parse_term(pair: pest::iterators::Pair<Rule>) -> Term<BareID> {
+fn parse_term(pair: pest::iterators::Pair<Rule>) -> Term<BareIdent> {
     match pair.as_rule() {
-        Rule::var => Var(pair.as_str().chars().next().unwrap()),
+        Rule::var => Var(pair.as_str().to_string()),
         Rule::abs => {
             let mut pair = pair.into_inner();
             let bound = pair.next().unwrap();
             let expr = pair.next().unwrap();
             Abs(
-                bound.as_str().chars().next().unwrap(),
+                bound.as_str().to_string(),
                 box parse_expr(expr.into_inner()),
             )
         }

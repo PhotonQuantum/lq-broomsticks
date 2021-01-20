@@ -1,41 +1,41 @@
-use crate::ast::Term::*;
-use crate::ast::{BareID, Term};
-use crate::index::uid::UID;
-use std::cmp::max;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-impl From<Term<UID>> for Term<BareID> {
+use crate::ast::Term;
+use crate::ast::Term::*;
+use crate::index::bare::BareIdent;
+use crate::index::uid::UID;
+
+impl From<Term<UID>> for Term<BareIdent> {
     fn from(term: Term<UID>) -> Self {
-        fn _to_bare(term: Term<UID>, mut var_maps: HashMap<UID, char>) -> Term<BareID> {
+        fn _to_bare(
+            term: Term<UID>,
+            var_maps: &mut HashMap<UID, String>,
+            var_set: &mut HashSet<BareIdent>,
+        ) -> Term<BareIdent> {
             match term {
                 Var(x) => Var(if !var_maps.contains_key(&x) {
                     x.name
                 } else {
-                    var_maps[&x]
+                    var_maps[&x].clone()
                 }),
                 Abs(x, e) => {
+                    // TODO avoid unnecessary renames (eg. λx1.λx.x1 x instead of λx1.λx2.x1 x2)
                     let bound_name = if e.has_name_collision(&x) {
-                        let last_name = var_maps
-                            .values()
-                            .fold_first(|x, y| max(x, y))
-                            .and_then(|i| Some(*i))
-                            .unwrap_or(('a' as u8 - 1) as char);
-                        let next_fv_name = e
-                            .next_free_var_name((last_name as u8 + 1) as char)
-                            .expect("name exhausted.");
-                        var_maps.insert(x, next_fv_name);
+                        let next_fv_name = e.new_fv_name(&x.name, var_set);
+                        var_maps.insert(x, next_fv_name.clone());
+                        var_set.insert(next_fv_name.clone());
                         next_fv_name
                     } else {
                         x.name
                     };
-                    Abs(bound_name, box _to_bare(*e, var_maps))
+                    Abs(bound_name, box _to_bare(*e, var_maps, var_set))
                 }
                 App(e1, e2) => App(
-                    box _to_bare(*e1, var_maps.clone()),
-                    box _to_bare(*e2, var_maps),
+                    box _to_bare(*e1, var_maps, var_set),
+                    box _to_bare(*e2, var_maps, var_set),
                 ),
             }
         }
-        _to_bare(term, HashMap::default())
+        _to_bare(term, &mut HashMap::default(), &mut HashSet::default())
     }
 }
