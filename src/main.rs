@@ -5,8 +5,8 @@ extern crate pest_derive;
 
 use index::uid::*;
 
-use crate::ast::ReduceStrategy::*;
 use crate::ast::{ReduceStrategy, Reducible, Term};
+use crate::ast::ReduceStrategy::*;
 use crate::index::bare::BareIdent;
 use crate::parser::parse;
 
@@ -28,6 +28,11 @@ fn main() {
     test_reduce("(\\y.\\x.z x y) x", APP);
     test_reduce("(\\y.\\x.z x y) x", CBN);
     test_reduce("(\\f.\\x.f x) (\\f.\\x.f x)", NOR);
+    assert_eq!(
+        Term::<UID>::from(parse("(λf.(λx.f (x x)) (λx.f (x x))) \\f.x").unwrap()).equals(&Term::<UID>::from(
+            parse("x").unwrap()
+        )), true
+    )
 }
 
 fn test_reduce(expr: &str, strategy: ReduceStrategy) {

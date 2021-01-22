@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::iter::FromIterator;
@@ -24,11 +25,19 @@ impl UIDGenerator {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Debug, Hash)]
 pub struct UID {
     pub name: String,
     pub uid: usize,
 }
+
+impl PartialEq for UID {
+    fn eq(&self, other: &Self) -> bool {
+        self.uid == other.uid
+    }
+}
+
+impl Eq for UID {}
 
 impl Display for UID {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -49,29 +58,12 @@ impl Term<UID> {
     }
 
     pub fn fv_names(&self) -> HashSet<BareIdent> {
-        self._fv_names(HashSet::default())
+        self.fv().iter().map(|ident| ident.name.clone()).collect()
     }
 
-    fn _fv_names(&self, mut bound_vars: HashSet<UID>) -> HashSet<BareIdent> {
-        match self {
-            Var(x) => {
-                if !bound_vars.contains(x) {
-                    let mut fvs = HashSet::default();
-                    fvs.insert(x.name.clone());
-                    fvs
-                } else {
-                    HashSet::default()
-                }
-            }
-            Abs(x, e) => {
-                bound_vars.insert(x.clone());
-                e._fv_names(bound_vars)
-            }
-            App(e1, e2) => {
-                let lhs_fvs = e1._fv_names(bound_vars.clone());
-                let rhs_fvs = e2._fv_names(bound_vars);
-                HashSet::from_iter(lhs_fvs.union(&rhs_fvs).cloned())
-            }
+    pub fn uid_generator(&self) -> UIDGenerator {
+        UIDGenerator {
+            count: self.fv().iter().fold(0usize, |count, v| max(count, v.uid)),
         }
     }
 

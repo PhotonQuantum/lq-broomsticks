@@ -1,4 +1,5 @@
 use crate::ast::*;
+use crate::index::bare::BareIdent;
 use crate::index::uid::UID;
 
 macro_rules! break_by_limit {
@@ -124,8 +125,6 @@ impl Term<UID> {
 }
 
 impl Reducible for Term<UID> {
-    type ID = UID;
-
     fn subst(&self, ex: &Self) -> Self {
         if let Abs(x, e) = self {
             e._subst(x, ex)
@@ -149,5 +148,32 @@ impl Reducible for Term<UID> {
             ReduceStrategy::HSR => self.hsr_reduce(limit),
             ReduceStrategy::HNO => self.hno_reduce(limit),
         }
+    }
+
+    fn equals(&self, other: &Self) -> bool {
+        /// Alpha and eta convertible terms are considered equal.
+        fn reassign_uid(term: Term<UID>) -> Term<UID> {
+            Term::<UID>::from(Term::<BareIdent>::from(term))
+        }
+
+        reassign_uid(
+            App(
+                box self.clone(),
+                box Var(UID {
+                    name: String::from("_"),
+                    uid: self.uid_generator().next(),
+                }),
+            )
+            .nf(),
+        ) == reassign_uid(
+            App(
+                box other.clone(),
+                box Var(UID {
+                    name: String::from("_"),
+                    uid: other.uid_generator().next(),
+                }),
+            )
+            .nf(),
+        )
     }
 }
