@@ -26,7 +26,7 @@ pub fn parse(source: &str) -> result::Result<Term<BareIdent>, Error<Rule>> {
                 }
             }
         }
-        _ => {}
+        _ => unreachable!(),
     }
 
     Ok(ast.first().unwrap().clone())
@@ -48,16 +48,35 @@ fn parse_expr<'a>(pairs: impl Iterator<Item = pest::iterators::Pair<'a, Rule>>) 
 fn parse_term(pair: pest::iterators::Pair<Rule>) -> Term<BareIdent> {
     match pair.as_rule() {
         Rule::var => Var(pair.as_str().to_string()),
+        Rule::app => parse_expr(pair.into_inner().next().unwrap().into_inner()),
         Rule::abs => {
             let mut pair = pair.into_inner();
-            let bound = pair.next().unwrap();
+            let ident = pair.next().unwrap();
+            let ty = pair.next().unwrap().into_inner().next().unwrap();
             let expr = pair.next().unwrap();
             Abs(
-                bound.as_str().to_string(),
+                ident.as_str().to_string(),
+                box parse_expr(ty.into_inner()),
                 box parse_expr(expr.into_inner()),
             )
         }
-        Rule::app => parse_expr(pair.into_inner().next().unwrap().into_inner()),
+        Rule::pi => {
+            let mut pair = pair.into_inner();
+            let ident = pair.next().unwrap();
+            let lty = pair.next().unwrap().into_inner().next().unwrap();
+            let rty = pair.next().unwrap().into_inner().next().unwrap();
+            Pi(
+                ident.as_str().to_string(),
+                box parse_expr(lty.into_inner()),
+                box parse_expr(rty.into_inner()),
+            )
+        }
+        Rule::kind => Term::Kind(match pair.as_str() {
+            "*" => Kinds::Star,
+            "□" => Kinds::Box,
+            "[]" => Kinds::Box,
+            _ => unreachable!(),
+        }),
         _ => unreachable!(),
     }
 }

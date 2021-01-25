@@ -18,7 +18,11 @@ impl From<Term<UID>> for Term<BareIdent> {
                 } else {
                     var_maps[&x].clone()
                 }),
-                Abs(x, e) => {
+                App(e1, e2) => App(
+                    box _to_bare(*e1, var_maps, var_set),
+                    box _to_bare(*e2, var_maps, var_set),
+                ),
+                Abs(x, ty, e) => {
                     // TODO avoid unnecessary renames (eg. λx1.λx.x1 x instead of λx1.λx2.x1 x2)
                     let bound_name = if e.has_name_collision(&x) {
                         let next_fv_name = e.new_fv_name(&x.name, var_set);
@@ -28,12 +32,15 @@ impl From<Term<UID>> for Term<BareIdent> {
                     } else {
                         x.name
                     };
-                    Abs(bound_name, box _to_bare(*e, var_maps, var_set))
+                    // TODO ty renaming
+                    Abs(
+                        bound_name,
+                        box _to_bare(*ty, var_maps, var_set),
+                        box _to_bare(*e, var_maps, var_set),
+                    )
                 }
-                App(e1, e2) => App(
-                    box _to_bare(*e1, var_maps, var_set),
-                    box _to_bare(*e2, var_maps, var_set),
-                ),
+                Pi(_, _, _) => unimplemented!(),
+                Kind(kind) => Term::Kind(kind),
             }
         }
         _to_bare(term, &mut HashMap::default(), &mut HashSet::default())

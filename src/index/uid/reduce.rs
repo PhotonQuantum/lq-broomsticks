@@ -22,8 +22,10 @@ impl Term<UID> {
                     self.clone()
                 }
             }
-            Abs(x, e) => Abs(x.clone(), box e._subst(from, to)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e._subst(from, to)), // TODO
             App(e1, e2) => App(box e1._subst(from, to), box e2._subst(from, to)),
+            Pi(_, _, _) => unimplemented!(),
+            Kind(_) => self.clone(),
         }
     }
 
@@ -31,7 +33,7 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.cbn_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(e2)
                     .cbn_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_, e2.clone()),
@@ -43,9 +45,9 @@ impl Term<UID> {
     fn nor_reduce(&self, limit: Option<usize>) -> Term<UID> {
         break_by_limit!(self, limit);
         match self {
-            Abs(x, e) => Abs(x.clone(), box e.nor_reduce(limit)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e.nor_reduce(limit)),
             App(e1, e2) => match e1.cbn_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(e2)
                     .nor_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_.nor_reduce(limit), box e2.nor_reduce(limit)),
@@ -58,7 +60,7 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.cbv_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(&e2.cbv_reduce(limit))
                     .cbv_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_, box e2.cbv_reduce(limit)),
@@ -71,12 +73,12 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.app_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(&e2.app_reduce(limit))
                     .app_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_, box e2.app_reduce(limit)),
             },
-            Abs(x, e) => Abs(x.clone(), box e.app_reduce(limit)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e.app_reduce(limit)),
             _ => self.clone(),
         }
     }
@@ -85,12 +87,12 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.cbv_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(&e2.hap_reduce(limit))
                     .hap_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_.hap_reduce(limit), box e2.hap_reduce(limit)),
             },
-            Abs(x, e) => Abs(x.clone(), box e.hap_reduce(limit)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e.hap_reduce(limit)),
             _ => self.clone(),
         }
     }
@@ -99,12 +101,12 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.hsr_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(&e2)
                     .hsr_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_, e2.clone()),
             },
-            Abs(x, e) => Abs(x.clone(), box e.hsr_reduce(limit)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e.hsr_reduce(limit)),
             _ => self.clone(),
         }
     }
@@ -113,12 +115,12 @@ impl Term<UID> {
         break_by_limit!(self, limit);
         match self {
             App(e1, e2) => match e1.hsr_reduce(limit) {
-                Abs(x, e) => Abs(x, e)
+                Abs(x, ty, e) => Abs(x, ty, e)
                     .subst(&e2)
                     .hno_reduce(limit.and_then(|i| Some(i - 1))),
                 e1_ => App(box e1_.hno_reduce(limit), box e2.hno_reduce(limit)),
             },
-            Abs(x, e) => Abs(x.clone(), box e.hno_reduce(limit)),
+            Abs(x, ty, e) => Abs(x.clone(), ty.clone(), box e.hno_reduce(limit)),
             _ => self.clone(),
         }
     }
@@ -126,7 +128,8 @@ impl Term<UID> {
 
 impl Reducible for Term<UID> {
     fn subst(&self, ex: &Self) -> Self {
-        if let Abs(x, e) = self {
+        if let Abs(x, ty, e) = self {
+            // TODO
             e._subst(x, ex)
         } else {
             panic!("only abstraction can be substituted.")
@@ -134,6 +137,7 @@ impl Reducible for Term<UID> {
     }
 
     fn beta_reduce(&self, strategy: ReduceStrategy, limit: Option<usize>) -> Self {
+        // TODO
         let limit = if let Some(l) = limit {
             Some(l)
         } else {

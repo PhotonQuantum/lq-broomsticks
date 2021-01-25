@@ -1,10 +1,16 @@
 lam = _{ "λ" | "\\" }
+_pi = _{ "π" | "\\pi" }
 
-var = { ALPHABETIC ~ NUMBER* }
-abs_bound = { ALPHABETIC ~ NUMBER* }
-abs = { lam ~ abs_bound ~ "." ~ expr }
+ident = @{ ALPHABETIC ~ ASCII_ALPHANUMERIC* }
+ident_nullable = @{ ALPHABETIC ~ ASCII_ALPHANUMERIC* | "_" }
+
+var = @{ ident }
 app = { "(" ~ expr ~ ")" }
-term = { abs | app | var }
+abs = { lam ~ ident_nullable ~ ":" ~ ty ~ "." ~ expr }
+pi = { _pi ~ ident_nullable ~ ":" ~ ty ~ "." ~ ty }
+kind = { "*" | "□" | "[]" }
+term = { abs | app | pi | kind | var}
 expr = { term ~ (" " ~ term)* }
+ty = { "("? ~ expr ~")"? }
 
 lambda = { SOI ~ expr ~ EOI }

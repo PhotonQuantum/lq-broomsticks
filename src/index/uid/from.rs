@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::ast::Term;
 use crate::ast::Term::*;
+use crate::ast::{Kinds, Term};
 use crate::index::bare::BareIdent;
 use crate::index::uid::{UIDGenerator, UID};
 
@@ -22,6 +22,11 @@ fn _from_bare(
     mut bound_vars: HashMap<BareIdent, usize>,
 ) -> (Term<UID>, HashMap<BareIdent, usize>) {
     match term {
+        App(e1, e2) => {
+            let (lhs, free_vars) = _from_bare(e1, uid_generator, free_vars, bound_vars.clone());
+            let (rhs, free_vars) = _from_bare(e2, uid_generator, free_vars, bound_vars);
+            (App(box lhs, box rhs), free_vars)
+        }
         Var(x) => {
             let uid = if free_vars.contains_key(x) {
                 free_vars[x]
@@ -39,7 +44,7 @@ fn _from_bare(
                 free_vars,
             )
         }
-        Abs(x, e) => {
+        Abs(x, _, e) => {
             let bound_id = uid_generator.next();
             bound_vars.insert(x.clone(), bound_id);
             let (term, free_vars) = _from_bare(e, uid_generator, free_vars, bound_vars);
@@ -49,15 +54,13 @@ fn _from_bare(
                         name: x.clone(),
                         uid: bound_id,
                     },
+                    box Term::Kind(Kinds::Star), // TODO
                     box term,
                 ),
                 free_vars,
             )
         }
-        App(e1, e2) => {
-            let (lhs, free_vars) = _from_bare(e1, uid_generator, free_vars, bound_vars.clone());
-            let (rhs, free_vars) = _from_bare(e2, uid_generator, free_vars, bound_vars);
-            (App(box lhs, box rhs), free_vars)
-        }
+        Pi(_, _, _) => unimplemented!(), // TODO
+        Kind(kind) => (Term::Kind(*kind), free_vars),
     }
 }

@@ -61,6 +61,7 @@ dependencies = [
 name = "lq-lang-playground"
 version = "0.1.0"
 dependencies = [
+ "maplit",
  "pest",
  "pest_derive",
 ]

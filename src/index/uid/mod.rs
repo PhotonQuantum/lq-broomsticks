@@ -1,7 +1,6 @@
 use std::cmp::max;
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Display, Formatter};
-use std::iter::FromIterator;
 
 use crate::ast::*;
 use crate::index::bare::BareIdent;
@@ -70,8 +69,10 @@ impl Term<UID> {
     pub fn has_name_collision(&self, bound_var: &UID) -> bool {
         match self {
             Var(x) => x != bound_var && x.name == bound_var.name,
-            Abs(_, e) => e.has_name_collision(bound_var),
+            Abs(bound_var, _, e) => e.has_name_collision(bound_var),
             App(e1, e2) => e1.has_name_collision(bound_var) || e2.has_name_collision(bound_var),
+            Pi(_, _, _) => unimplemented!(),
+            Kind(_) => false,
         }
     }
 }
